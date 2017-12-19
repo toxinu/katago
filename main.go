@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/toxinu/karago/backends"
+	"github.com/toxinu/katago/backends"
 )
 
 func main() {
