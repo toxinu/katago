@@ -4,10 +4,20 @@ import (
 	"fmt"
 
 	"github.com/toxinu/katago/backends"
+	"github.com/toxinu/katago/downloader"
 )
 
 func main() {
-	d := backends.NewDownloader("mangafox")
+	d := downloader.NewDownloader("mangafox")
+
+	fmt.Println(" :: Backends")
+	for _, backend := range backends.Backends {
+		if backend.Name() == d.Backend.Name() {
+			fmt.Println("     -", backend.Name(), "(enabled)")
+		} else {
+			fmt.Println("     -", backend.Name())
+		}
+	}
 
 	mangas, err := d.Backend.Search("one piece")
 	if err != nil {
@@ -15,14 +25,14 @@ func main() {
 	}
 
 	manga := mangas[0]
-	fmt.Println(" :: Manga   => #%v", manga)
+	fmt.Println(" :: Manga   =>", manga)
 
 	chapters, err := d.Backend.Chapters(manga)
 	if err != nil {
 		panic(err)
 	}
 	chapter := chapters[0]
-	fmt.Println(" :: Chapter => #%v", chapter)
+	fmt.Println(" :: Chapter =>", chapter)
 
 	err = d.Download(manga, chapter, "./mangas")
 	if err != nil {
@@ -38,6 +48,6 @@ func main() {
 	// 	if err != nil {
 	// 		panic(err)
 	// 	}
-	// 	fmt.Println("%#v %s", page, URL)
+	// 	fmt.Println(page, URL)
 	// }
 }

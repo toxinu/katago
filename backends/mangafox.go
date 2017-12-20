@@ -9,28 +9,39 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/toxinu/katago/client"
+
 	"golang.org/x/net/html"
 )
 
 const (
-	MangaFoxBaseURL                    = "http://mangafox.la"
-	MangaFoxHTMLSelectorMangaName      = "#series_info div.cover img"
+	// MangaFoxBaseURL is base URL for MangaFox backend
+	MangaFoxBaseURL = "http://mangafox.la"
+	// MangaFoxHTMLSelectorMangaName is manga name selector
+	MangaFoxHTMLSelectorMangaName = "#series_info div.cover img"
+	// MangaFoxHTMLSelectorMangaChapters1 is manga chapters selector
 	MangaFoxHTMLSelectorMangaChapters1 = "#chapters ul.chlist li h3 a"
+	// MangaFoxHTMLSelectorMangaChapters2 is manga chapters selector
 	MangaFoxHTMLSelectorMangaChapters2 = "#chapters ul.chlist li h4 a"
-	MangaFoxHTMLSelectorChapterPages   = "#top_center_bar div.r option"
-	MangaFoxHTMLSelectorPageImage      = "#image"
+	// MangaFoxHTMLSelectorChapterPages is chapter pages selector
+	MangaFoxHTMLSelectorChapterPages = "#top_center_bar div.r option"
+	// MangaFoxHTMLSelectorPageImage is page image selector
+	MangaFoxHTMLSelectorPageImage = "#image"
 )
 
 var (
-	MangaFoxRegexpIdentifyManga   = regexp.MustCompile("^/manga/[0-9a-z_]+/?$")
-	MangaFoxRegexpIdentifyChapter = regexp.MustCompile("^/manga/[0-9a-z_]+/.+$")
-	MangaFoxRegexpChapterName     = regexp.MustCompile("^.*/c(\\d+(\\.\\d+)?).*$")
-	MangaFoxRegexpPageBaseUrlPath = regexp.MustCompile("/?(\\d+\\.html)?$")
+	// MangaFoxRegexpPageBaseURLPath is page URL regexp
+	MangaFoxRegexpPageBaseURLPath = regexp.MustCompile("/?(\\d+\\.html)?$")
 )
 
 // MangaFox is MangaFox backend
 type MangaFox struct {
-	Downloader *Downloader
+	Client *client.Client
+}
+
+// Name implements Backend interface
+func (*MangaFox) Name() string {
+	return "MangaFox"
 }
 
 // Search implements Backend interface
@@ -49,7 +60,7 @@ func (b *MangaFox) Search(term string) ([]*Manga, error) {
 		return nil, err
 	}
 
-	resp, err = b.Downloader.HTTPGet(url, []int{200})
+	resp, err = b.Client.Get(url, []int{200})
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +97,7 @@ func (b *MangaFox) Search(term string) ([]*Manga, error) {
 
 // Chapters implements Backend interface
 func (b *MangaFox) Chapters(manga *Manga) ([]*Chapter, error) {
-	doc, err := b.Downloader.HTTPGetDocument(manga.URL, []int{200})
+	doc, err := b.Client.GetDocument(manga.URL, []int{200})
 	if err != nil {
 		return nil, err
 	}
@@ -115,14 +126,15 @@ func (b *MangaFox) Chapters(manga *Manga) ([]*Chapter, error) {
 	return chapters, err
 }
 
+// Pages implements Backend interface
 func (b *MangaFox) Pages(chapter *Chapter) ([]*Page, error) {
-	doc, err := b.Downloader.HTTPGetDocument(chapter.URL, []int{200})
+	doc, err := b.Client.GetDocument(chapter.URL, []int{200})
 	if err != nil {
 		return nil, err
 	}
 
-	basePageUrl := urlCopy(chapter.URL)
-	basePageUrl.Path = MangaFoxRegexpPageBaseUrlPath.ReplaceAllString(basePageUrl.Path, "")
+	basePageURL := urlCopy(chapter.URL)
+	basePageURL.Path = MangaFoxRegexpPageBaseURLPath.ReplaceAllString(basePageURL.Path, "")
 
 	optionNodes := doc.Find(MangaFoxHTMLSelectorChapterPages).Nodes
 	pages := make([]*Page, 0, len(optionNodes))
@@ -137,7 +149,7 @@ func (b *MangaFox) Pages(chapter *Chapter) ([]*Page, error) {
 			continue
 		}
 
-		pageURL := urlCopy(basePageUrl)
+		pageURL := urlCopy(basePageURL)
 		pageURL.Path += fmt.Sprintf("/%d.html", pageNumber)
 
 		page := &Page{URL: pageURL}
@@ -147,8 +159,9 @@ func (b *MangaFox) Pages(chapter *Chapter) ([]*Page, error) {
 	return pages, nil
 }
 
+// PageImageURL implements Backend interface
 func (b *MangaFox) PageImageURL(page *Page) (*url.URL, error) {
-	doc, err := b.Downloader.HTTPGetDocument(page.URL, []int{200})
+	doc, err := b.Client.GetDocument(page.URL, []int{200})
 	if err != nil {
 		return nil, err
 	}

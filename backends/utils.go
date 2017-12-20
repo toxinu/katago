@@ -47,6 +47,12 @@ func htmlGetNodeText(node *html.Node) (string, error) {
 	}
 }
 
+func urlCopy(u *url.URL) *url.URL {
+	urlCopyVal := *u
+	urlCopy := &urlCopyVal
+	return urlCopy
+}
+
 func chapterSliceReverse(chapters []*Chapter) []*Chapter {
 	count := len(chapters)
 	reversed := make([]*Chapter, 0, count)
@@ -54,19 +60,4 @@ func chapterSliceReverse(chapters []*Chapter) []*Chapter {
 		reversed = append(reversed, chapters[i])
 	}
 	return reversed
-}
-
-func urlCopy(u *url.URL) *url.URL {
-	urlCopyVal := *u
-	urlCopy := &urlCopyVal
-	return urlCopy
-}
-
-func contains(intSlice []int, searchInt int) bool {
-	for _, value := range intSlice {
-		if value == searchInt {
-			return true
-		}
-	}
-	return false
 }
