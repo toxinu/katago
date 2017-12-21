@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,20 +28,20 @@ type Downloader struct {
 }
 
 // NewDownloader return a Downloader
-func NewDownloader(backendName string) *Downloader {
+func NewDownloader(backendName string) (*Downloader, error) {
 	c := &client.Client{Retry: 10}
 	backends.Initialize(c)
 
 	b, ok := backends.Backends[backendName]
 	if !ok {
-		panic("backend not found")
+		return nil, errors.New("Invalid backend name")
 	}
 	return &Downloader{
 		Backend:         b,
 		Client:          c,
 		ParallelChapter: 5,
 		ParallelPage:    5,
-	}
+	}, nil
 }
 
 // Download retrieve a manga's chapter
