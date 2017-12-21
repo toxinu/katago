@@ -1,0 +1,4 @@
+
+[[constraint]]
+  name = "github.com/c-bata/go-prompt"
+  version = "0.1.1"

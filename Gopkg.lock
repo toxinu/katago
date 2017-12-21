@@ -14,14 +14,32 @@
   revision = "349dd0209470eabd9514242c688c403c0926d266"
 
 [[projects]]
+  name = "github.com/c-bata/go-prompt"
+  packages = ["."]
+  revision = "c292a2f4b4fe8563883871456e19028ff9df0f26"
+  version = "v0.1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/pkg/term"
+  packages = ["termios"]
+  revision = "b1f72af2d63057363398bec5873d16a98b453312"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["html","html/atom"]
   revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "d818ba11af4465e00c1998bd3f8a55603b422290"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c63cf94c4314a6aac63c290a96d01a81923f394c0a4513a2f1e3ede36f591a50"
+  inputs-digest = "60b4c4a5ad7db4126a0e0848269608d503e1f785731d9b337d6c65e3bc3f0e96"
   solver-name = "gps-cdcl"
   solver-version = 1
