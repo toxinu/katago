@@ -1,9 +1,8 @@
 package downloader
 
 import (
-	"errors"
-	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,7 +18,7 @@ var (
 	regexpImageContentType, _ = regexp.Compile("^image/(.+)$")
 )
 
-// Downloader manage HTTP requests to download manga
+// Downloader downloads manga
 type Downloader struct {
 	Backend         backends.Backend
 	Client          *client.Client
@@ -27,15 +26,16 @@ type Downloader struct {
 	ParallelPage    int
 }
 
-// NewDownloader return a Downloader
+// NewDownloader returns a Downloader
 func NewDownloader(backendName string) (*Downloader, error) {
 	c := &client.Client{Retry: 10}
-	backends.Initialize(c)
 
-	b, ok := backends.Backends[backendName]
-	if !ok {
-		return nil, errors.New("Invalid backend name")
+	backends.Initialize(c)
+	b, err := backends.Get(backendName)
+	if err != nil {
+		return nil, err
 	}
+
 	return &Downloader{
 		Backend:         b,
 		Client:          c,
@@ -44,14 +44,49 @@ func NewDownloader(backendName string) (*Downloader, error) {
 	}, nil
 }
 
-// Download retrieve a manga's chapter
-func (d *Downloader) Download(manga *backends.Manga, chapter *backends.Chapter, output string) error {
+// Download retrieves a manga's chapters
+func (d *Downloader) Download(manga *backends.Manga, chapters []*backends.Chapter, output string, results chan<- error) {
+	var waitGroup sync.WaitGroup
+
+	type chapterTask struct {
+		manga   *backends.Manga
+		chapter *backends.Chapter
+	}
+
+	tasks := make(chan *chapterTask)
+	go func() {
+		for _, chapter := range chapters {
+			tasks <- &chapterTask{
+				manga:   manga,
+				chapter: chapter,
+			}
+		}
+		close(tasks)
+	}()
+
+	waitGroup.Add(d.ParallelChapter)
+	for i := 0; i < d.ParallelChapter; i++ {
+		go func() {
+			for mangaChapterTask := range tasks {
+				results <- d.DownloadChapter(mangaChapterTask.manga, mangaChapterTask.chapter, output)
+			}
+			waitGroup.Done()
+		}()
+	}
+
+	go func() {
+		waitGroup.Wait()
+		close(results)
+	}()
+}
+
+// DownloadChapter retrieves a manga's chapter
+func (d *Downloader) DownloadChapter(manga *backends.Manga, chapter *backends.Chapter, output string) error {
 	var (
 		waitGroup sync.WaitGroup
 	)
 
 	output = path.Join(output, manga.Name, chapter.Name)
-	fmt.Println(" :: Output  =>", output)
 
 	pages, err := d.Backend.Pages(chapter)
 	if err != nil {
@@ -101,14 +136,28 @@ func (d *Downloader) Download(manga *backends.Manga, chapter *backends.Chapter, 
 
 // DownloadPage retrieve a Manga Page
 func (d *Downloader) DownloadPage(page *backends.Page, index int, output string) error {
+	var (
+		err  error
+		resp *http.Response
+	)
+
 	pagePath := path.Join(output, strconv.Itoa(index))
 
-	imageURL, err := d.Backend.PageImageURL(page)
-	if err != nil {
-		return err
+	for i := 0; i < 10; i++ {
+		imageURL, err := d.Backend.PageImageURL(page)
+		if err != nil {
+			continue
+		}
+
+		// resp, err := d.Client.Get(imageURL, make([]int, 1))
+		resp, err = d.Client.Get(imageURL, []int{200})
+		if err != nil {
+			continue
+		} else {
+			break
+		}
 	}
 
-	resp, err := d.Client.Get(imageURL, make([]int, 1))
 	if err != nil {
 		return err
 	}
@@ -141,9 +190,11 @@ func (d *Downloader) DownloadPage(page *backends.Page, index int, output string)
 	if err != nil {
 		return err
 	}
+
 	err = ioutil.WriteFile(pagePath, data, 0644)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

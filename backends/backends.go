@@ -1,6 +1,7 @@
 package backends
 
 import (
+	"errors"
 	"net/url"
 
 	"github.com/toxinu/katago/client"
@@ -44,4 +45,14 @@ func Initialize(c *client.Client) {
 	Backends = map[string]Backend{
 		"mangafox": &MangaFox{Client: c},
 	}
+}
+
+// Get returns a Backend
+func Get(name string) (Backend, error) {
+	b, ok := Backends[name]
+	if !ok {
+		return nil, errors.New("Invalid backend name")
+	}
+	return b, nil
+
 }

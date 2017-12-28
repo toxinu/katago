@@ -1,7 +1,7 @@
 package client
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -47,12 +47,12 @@ func (c *Client) Get(u *url.URL, successCodes []int) (*http.Response, error) {
 	for i := 0; i < c.Retry; i++ {
 		resp, err = http.DefaultClient.Do(req)
 		if err == nil && (len(successCodes) == 1 && (successCodes[0] == 0 || c.contains(successCodes, resp.StatusCode))) {
-			time.Sleep(500 * time.Millisecond)
 			return resp, err
 		}
+		time.Sleep(500 * time.Millisecond)
 	}
 
-	return nil, errors.New("Success code never reached")
+	return nil, fmt.Errorf("Success code never reached (%s)", u)
 }
 
 // GetBody parse a GET response
